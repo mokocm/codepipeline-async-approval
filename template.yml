@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Approval SAM Template
+
+Resources:
+  EventFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/event
+      Handler: index.handler
+      Runtime: nodejs12.x
+      Role: !GetAtt ApprovalLambdaRole.Arn
+      Timeout: 60
+      Events:
+        Cron:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 minute)
+      Environment:
+        Variables:
+          QUEUE_URL: !Sub ${SQS}
+
+  Topic:
+    Type: AWS::SNS::Topic
+
+  SnsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: sqs
+      Endpoint: !GetAtt SQS.Arn
+      TopicArn: !Ref Topic
+
+  SQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: approvalToken
+
+  SQSPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Id: MyQueuePolicy
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action:
+              - sqs:SendMessage
+            Resource: "*"
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref Topic
+      Queues:
+        - !Ref SQS
+
+  ApprovalLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: 'allow'
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+
+  ApprovalLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - codepipeline:PutApprovalResult
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+            Resource: !Ref SQS
+      PolicyName: "CodePipelineApproval"
+      Roles:
+        - !Ref ApprovalLambdaRole
