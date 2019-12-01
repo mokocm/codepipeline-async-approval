@@ -10,12 +10,10 @@ exports.handler = event => {
 
   sqs.receiveMessage({QueueUrl}, (err, data) => {
     if (err) return console.error(err);
-    console.log(data);
-    if (data.Messages === undefined) return console.log('null');
+    if (data.Messages === undefined) return;
 
     data.Messages.map(message => {
       const body = JSON.parse(message.Body);
-      console.log(body);
       const queueMessage = JSON.parse(body.Message);
       console.log(queueMessage);
       const pipelineParams = {

@@ -6,6 +6,7 @@ Resources:
   EventFunction:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName: PipelineApproveFunction
       CodeUri: src/event
       Handler: index.handler
       Runtime: nodejs12.x
@@ -22,6 +23,8 @@ Resources:
 
   Topic:
     Type: AWS::SNS::Topic
+    Properties:
+      TopicName: "ApprovalTopic"
 
   SnsSubscription:
     Type: AWS::SNS::Subscription
