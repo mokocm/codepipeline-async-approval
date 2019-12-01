@@ -80,7 +80,8 @@ Resources:
             Action:
               - sqs:ReceiveMessage
               - sqs:DeleteMessage
-            Resource: !Ref SQS
+            Resource: !GetAtt SQS.Arn
+
       PolicyName: "CodePipelineApproval"
       Roles:
         - !Ref ApprovalLambdaRole
